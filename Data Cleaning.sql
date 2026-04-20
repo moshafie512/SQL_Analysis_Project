@@ -84,71 +84,42 @@ FROM layoffs_staging2;
 -- _______________________________________________________
 -- Standardizing data
 
-SELECT company, TRIM(company)
-FROM layoffs_staging2;
-
+-- Clean Company Names
 UPDATE layoffs_staging2
 SET company = TRIM(company);
--- ------------------------------------------
-SELECT DISTINCT industry
-FROM layoffs_staging2
-;
 
+-- Standardize Industry Values
 UPDATE layoffs_staging2
 SET industry = 'Crypto'
 WHERE industry LIKE 'Crypto%';
 
--- ------------------------------------------
-
-SELECT DISTINCT country, TRIM(TRAILING '.' FROM country)
-FROM layoffs_staging2
-ORDER BY 1;
-
+-- Clean Country Names
 UPDATE layoffs_staging2
 SET country = TRIM(TRAILING '.' FROM country) 
 WHERE country LIKE 'United States%';
 
--- ------------------------------------------
-
-SELECT `date`
-FROM layoffs_staging2;
-
-
+-- Convert Date Format
 UPDATE layoffs_staging2
 SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
-
 
 ALTER TABLE layoffs_staging2
 MODIFY COLUMN `date` DATE;
 
--- ------------------------------------------
+-- _______________________________________________________
+-- Handling Missing Values
 
+-- Identify Missing Data
 SELECT *
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL
 AND percentage_laid_off IS NULL;
 
+-- Convert Empty Strings to NULL
 UPDATE layoffs_staging2
 SET industry = NULL
 WHERE industry = '';
 
-SELECT *
-FROM layoffs_staging2
-WHERE industry IS NULL
-OR industry = '';
-
-SELECT *
-FROM layoffs_staging2
-WHERE company LIKE 'Bally%';
-
-SELECT t1.industry, t2.industry
-FROM layoffs_staging2 t1
-JOIN layoffs_staging2 t2
-	ON t1.company = t2.company
-    AND t1.location = t2.location
-WHERE (t1.industry IS NULL OR t1.industry = '')
-AND t2.industry IS NOT NULL;
-
+-- Fill Missing Industry Using Same Company Data
 UPDATE layoffs_staging2 t1
 JOIN layoffs_staging2 t2
 	ON t1.company = t2.company
@@ -156,29 +127,18 @@ SET t1.industry = t2.industry
 WHERE t1.industry IS NULL
 AND t2.industry IS NOT NULL;
 
--- ------------------------------------------
-
-SELECT *
-FROM layoffs_staging2;
-
-
-SELECT *
-FROM layoffs_staging2
-WHERE total_laid_off IS NULL
-AND percentage_laid_off IS NULL;
-
-
+-- Remove Incomplete Rows
 DELETE
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL
 AND percentage_laid_off IS NULL;
 
--- ------------------------------------------
-
-# THE FINAL CLEANED DATA
+-- _______________________________________
+-- THE FINAL CLEANED DATA
 SELECT *
 FROM layoffs_staging2;
 
+-- Drop Helper Column
 ALTER TABLE layoffs_staging2
 DROP COLUMN row_num;
 
